@@ -18,39 +18,41 @@ func (node *avlNode[K, V]) balance() int {
 	return node.left.height() - node.right.height()
 }
 
-func (node *avlNode[K, V]) delete(key K) (*avlNode[K, V], bool) {
+func (node *avlNode[K, V]) delete(key K) (*avlNode[K, V], V, bool) {
 	var res bool
+	var v V
 	if node == nil {
-		return nil, false
+		return nil, v, false
 	} else if key < node.key {
-		node.left, res = node.left.delete(key)
+		node.left, v, res = node.left.delete(key)
 	} else if key > node.key {
-		node.right, res = node.right.delete(key)
+		node.right, v, res = node.right.delete(key)
 	} else if node.left == nil && node.right == nil {
-		return nil, true
+		return nil, node.value, true
 	} else if node.left == nil {
-		node, res = node.right, true
+		node, v, res = node.right, node.value, true
 	} else if node.right == nil {
-		node, res = node.left, true
+		node, v, res = node.left, node.value, true
 	} else {
 		min := node.right.min()
+		v = node.value
 		node.key, node.value = min.key, min.value
-		node.right, res = node.right.delete(min.key)
+		node.right, _, res = node.right.delete(min.key)
 	}
 
 	node.h = 1 + max(node.left.height(), node.right.height())
 	if b := node.balance(); b > 1 && node.left.balance() >= 0 {
-		return rightRotate(node), res
+		return rightRotate(node), v, res
 	} else if b > 1 {
 		node.left = leftRotate(node.left)
-		return rightRotate(node), res
+		return rightRotate(node), v, res
 	} else if b < -1 && node.right.balance() <= 0 {
-		return leftRotate(node), res
+		return leftRotate(node), v, res
 	} else if b < -1 {
 		node.right = rightRotate(node.right)
-		return leftRotate(node), res
+		return leftRotate(node), v, res
 	}
-	return node, res
+	return node, v, res
 }
 
 func (node *avlNode[K, V]) height() int {
@@ -100,38 +102,39 @@ type AVLTree[K constraints.Ordered, V any] struct {
 	root *avlNode[K, V]
 }
 
+func (tree *AVLTree[K, V]) Add(key K, value V) bool {
+	var res bool
+	tree.root, res = tree.root.insert(key, value)
+	return res
+}
+
 func (tree *AVLTree[K, V]) Height() int {
 	return tree.root.height()
 }
 
-func leftRotate[K constraints.Ordered, V any](x *avlNode[K, V]) *avlNode[K, V] {
-	var y *avlNode[K, V] = x.right
-	var t2 *avlNode[K, V] = y.left
+func (tree *AVLTree[K, V]) Remove(key K) (V, bool) {
+	_, v, has := tree.root.delete(key)
+	return v, has
+}
 
-	// Perform rotation
+func leftRotate[K constraints.Ordered, V any](x *avlNode[K, V]) *avlNode[K, V] {
+	y := x.right
+	t2 := y.left
 	y.left = x
 	x.right = t2
 
-	// Update heights
 	x.h = max(x.left.h, x.right.h) + 1
 	y.h = max(y.left.h, y.right.h) + 1
-
-	// Return new root
 	return y
 }
 
 func rightRotate[K constraints.Ordered, V any](y *avlNode[K, V]) *avlNode[K, V] {
-	var x *avlNode[K, V] = y.left
-	var t2 *avlNode[K, V] = x.right
-
-	// Perform rotation
+	x := y.left
+	t2 := x.right
 	x.right = y
 	y.left = t2
 
-	// Update heights
 	y.h = max(y.left.h, y.right.h) + 1
 	x.h = max(x.left.h, x.right.h) + 1
-
-	// Return new root
 	return x
 }
