@@ -1,6 +1,10 @@
 package avltree
 
-import "golang.org/x/exp/constraints"
+import (
+	"reflect"
+
+	"golang.org/x/exp/constraints"
+)
 
 type avlNode[K constraints.Ordered, V any] struct {
 	count_, height_ int
@@ -116,11 +120,27 @@ func (this *avlNode[K, V]) get(key K) (V, bool) {
 	return this.value, true
 }
 
+func (this *avlNode[K, V]) has(value V) bool {
+	return this != nil && (reflect.DeepEqual(this.value, value) || this.left.has(value) || this.right.has(value))
+}
+
 func (this *avlNode[K, V]) height() int {
 	if this == nil {
 		return 0
 	}
 	return this.height_
+}
+
+func (this *avlNode[K, V]) higher(key K) (K, V, bool) {
+	if this == nil {
+		return key, zeroValue[V](), false
+	} else if key > this.key {
+		return this.right.higher(key)
+	} else if k, v, res := this.left.higher(key); res {
+		return k, v, res
+	} else {
+		return this.key, this.value, true
+	}
 }
 
 func (this *avlNode[K, V]) insert(key K, value V) (*avlNode[K, V], bool) {
@@ -166,6 +186,18 @@ func (this *avlNode[K, V]) leftRotate() *avlNode[K, V] {
 	return y
 }
 
+func (this *avlNode[K, V]) lower(key K) (K, V, bool) {
+	if this == nil {
+		return key, zeroValue[V](), false
+	} else if key < this.key {
+		return this.left.lower(key)
+	} else if k, v, res := this.right.lower(key); res {
+		return k, v, res
+	} else {
+		return this.key, this.value, true
+	}
+}
+
 func (this *avlNode[K, V]) max() *avlNode[K, V] {
 	for ; this.right != nil; this = this.right {
 	}
@@ -201,8 +233,18 @@ func (this *AVLTree[K, V]) Add(key K, value V) bool {
 	return res
 }
 
+func (this *AVLTree[K, V]) AddAll(entries map[K]V) {
+	for k, v := range entries {
+		_ = this.Add(k, v)
+	}
+}
+
 func (this *AVLTree[K, V]) Ceiling(key K) (K, V, bool) {
 	return this.root.ceiling(key)
+}
+
+func (this *AVLTree[K, V]) Clear() {
+	this.root = nil
 }
 
 func (this *AVLTree[K, V]) Count() int {
@@ -246,8 +288,24 @@ func (this *AVLTree[K, V]) Has(key K) bool {
 	return has
 }
 
+func (this *AVLTree[K, V]) HasValue(value V) bool {
+	return this.root.has(value)
+}
+
 func (this *AVLTree[K, V]) Height() int {
 	return this.root.height()
+}
+
+func (this *AVLTree[K, V]) Higher(key K) (K, V, bool) {
+	return this.root.higher(key)
+}
+
+func (this *AVLTree[K, V]) Keys() []K {
+	nodes, res := this.preorder(), make([]K, 0, this.Count())
+	for _, node := range nodes {
+		res = append(res, node.key)
+	}
+	return res
 }
 
 func (this *AVLTree[K, V]) Last() (K, V, bool) {
@@ -256,6 +314,10 @@ func (this *AVLTree[K, V]) Last() (K, V, bool) {
 		return zeroValue[K](), zeroValue[V](), false
 	}
 	return last.key, last.value, true
+}
+
+func (this *AVLTree[K, V]) Lower(key K) (K, V, bool) {
+	return this.root.lower(key)
 }
 
 func (this *AVLTree[K, V]) PollFirst() (K, V, bool) {
@@ -282,6 +344,36 @@ func (this *AVLTree[K, V]) Remove(key K) (V, bool) {
 	} else {
 		return res.value, true
 	}
+}
+
+func (this *AVLTree[K, V]) ToMap() map[K]V {
+	res := make(map[K]V, this.Count())
+	for _, node := range this.preorder() {
+		res[node.key] = node.value
+	}
+	return res
+}
+
+func (this *AVLTree[K, V]) Values() []V {
+	res := make([]V, 0, this.Count())
+	for _, node := range this.preorder() {
+		res = append(res, node.value)
+	}
+	return res
+}
+
+func (this *AVLTree[K, V]) preorder() []*avlNode[K, V] {
+	res := make([]*avlNode[K, V], 0, this.Count())
+	var po func(*avlNode[K, V])
+	po = func(node *avlNode[K, V]) {
+		if node == nil {
+			return
+		}
+		po(node.left)
+		res = append(res, node)
+		po(node.right)
+	}
+	return res
 }
 
 func zeroValue[T any]() T {
