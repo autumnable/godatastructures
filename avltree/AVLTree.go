@@ -146,7 +146,7 @@ func (this *avlNode[K, V]) higher(key K) (K, V, bool) {
 func (this *avlNode[K, V]) insert(key K, value V) (*avlNode[K, V], bool) {
 	var res bool
 	if this == nil {
-		return &avlNode[K, V]{count_: 1, key: key, value: value}, true
+		return &avlNode[K, V]{count_: 1, height_: 1, key: key, value: value}, true
 	} else if key < this.key {
 		this.left, res = this.left.insert(key, value)
 	} else if key > this.key {
@@ -181,8 +181,8 @@ func (this *avlNode[K, V]) leftRotate() *avlNode[K, V] {
 	y.count_ = 1 + this.count_ + y.right.count()
 	y.left, this.right = this, t2
 
-	this.height_ = max(this.left.height_, this.right.height_) + 1
-	y.height_ = max(y.left.height_, y.right.height_) + 1
+	this.height_ = max(this.left.height(), this.right.height()) + 1
+	y.height_ = max(y.left.height(), y.right.height()) + 1
 	return y
 }
 
@@ -218,8 +218,8 @@ func (this *avlNode[K, V]) rightRotate() *avlNode[K, V] {
 	x.count_ = 1 + this.count_ + x.left.count()
 	x.right, this.left = this, t2
 
-	this.height_ = max(this.left.height_, this.right.height_) + 1
-	x.height_ = max(x.left.height_, x.right.height_) + 1
+	this.height_ = max(this.left.height(), this.right.height()) + 1
+	x.height_ = max(x.left.height(), x.right.height()) + 1
 	return x
 }
 
